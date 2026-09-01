@@ -1,299 +1,210 @@
 import { useEffect, useState } from "react";
 
 function Calendar() {
-    const [sessions, setSessions] = useState([]);
-    const [currentDate, setCurrentDate] = useState(
-        new Date()
-    );
-    const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [loading, setLoading] = useState(true);
 
-    // ========================================
-    // GET STUDY PLANS
-    // ========================================
+  // ========================================
+  // GET STUDY PLANS
+  // ========================================
 
-    useEffect(() => {
-        const fetchSessions = async () => {
-            try {
-                const response = await fetch(
-                    "http://localhost:5000/api/sessions"
-                );
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/sessions");
 
-                if (!response.ok) {
-                    throw new Error(
-                        "Failed to fetch study plans."
-                    );
-                }
-
-                const data = await response.json();
-
-                setSessions(
-                    Array.isArray(data) ? data : []
-                );
-            } catch (error) {
-                console.error(
-                    "Calendar fetch error:",
-                    error
-                );
-
-                setSessions([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchSessions();
-    }, []);
-
-    // ========================================
-    // DATE
-    // ========================================
-
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-
-    const firstDay = new Date(
-        year,
-        month,
-        1
-    ).getDay();
-
-    const daysInMonth = new Date(
-        year,
-        month + 1,
-        0
-    ).getDate();
-
-    const monthName = currentDate.toLocaleString(
-        "default",
-        {
-            month: "long",
+        if (!response.ok) {
+          throw new Error("Failed to fetch study plans.");
         }
-    );
 
-    // ========================================
-    // PREVIOUS MONTH
-    // ========================================
+        const data = await response.json();
 
-    const previousMonth = () => {
-        setCurrentDate(
-            new Date(year, month - 1, 1)
-        );
+        setSessions(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Calendar fetch error:", error);
+        setSessions([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // ========================================
-    // NEXT MONTH
-    // ========================================
+    fetchSessions();
+  }, []);
 
-    const nextMonth = () => {
-        setCurrentDate(
-            new Date(year, month + 1, 1)
-        );
-    };
+  // ========================================
+  // DATE
+  // ========================================
 
-    // ========================================
-    // GET PLANS FOR SPECIFIC DAY
-    // ========================================
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
-    const getSessionsForDay = (day) => {
-        const date =
-            `${year}-${String(month + 1).padStart(
-                2,
-                "0"
-            )}-${String(day).padStart(2, "0")}`;
+  const firstDay = new Date(year, month, 1).getDay();
 
-        return sessions.filter((session) => {
-            if (!session.study_date) {
-                return false;
-            }
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            return (
-                String(session.study_date).slice(
-                    0,
-                    10
-                ) === date
-            );
-        });
-    };
+  const monthName = currentDate.toLocaleString("default", {
+    month: "long",
+  });
 
-    // ========================================
-    // CREATE CALENDAR CELLS
-    // ========================================
+  // ========================================
+  // PREVIOUS MONTH
+  // ========================================
 
-    const cells = [];
+  const previousMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
 
-    // Empty cells before first day
-    for (let i = 0; i < firstDay; i++) {
-        cells.push(
-            <div
-                className="calendar-day empty"
-                key={`empty-${i}`}
-            />
-        );
-    }
+  // ========================================
+  // NEXT MONTH
+  // ========================================
 
-    // Actual days
-    for (
-        let day = 1;
-        day <= daysInMonth;
-        day++
-    ) {
-        const daySessions =
-            getSessionsForDay(day);
+  const nextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
 
-        cells.push(
-            <div
-                className="calendar-day"
-                key={day}
-            >
-                <div className="day-number">
-                    {day}
-                </div>
+  // ========================================
+  // GET DATE WITHOUT TIMEZONE CONVERSION
+  // ========================================
 
-                <div className="calendar-sessions">
-                    {daySessions.map(
-                        (session) => (
-                            <div
-                                className="calendar-session"
-                                key={session.id}
-                            >
-                                <strong>
-                                    📚{" "}
-                                    {session.subject}
-                                </strong>
+  const getDateString = (day) => {
+    return `${year}-${String(month + 1).padStart(
+      2,
+      "0",
+    )}-${String(day).padStart(2, "0")}`;
+  };
 
-                                {session.topic && (
-                                    <small>
-                                        {
-                                            session.topic
-                                        }
-                                    </small>
-                                )}
+  // ========================================
+  // GET PLANS FOR SPECIFIC DAY
+  // ========================================
 
-                                {session.study_type && (
-                                    <small>
-                                        {
-                                            session.study_type
-                                        }
-                                    </small>
-                                )}
+  const getSessionsForDay = (day) => {
+    const calendarDate = getDateString(day);
 
-                                <small>
-                                    ⏱{" "}
-                                    {
-                                        session.duration_minutes
-                                    }{" "}
-                                    min
-                                </small>
-                            </div>
-                        )
-                    )}
-                </div>
+    return sessions.filter((session) => {
+      if (!session.study_date) {
+        return false;
+      }
+
+      /*
+       * IMPORTANT:
+       * Do NOT use new Date(session.study_date)
+       * because it can convert the date to UTC
+       * and move it one day backward.
+       */
+
+      const studyDate = String(session.study_date);
+
+      // Handles:
+      // 2026-09-12
+      // 2026-09-12T00:00:00.000Z
+      // 2026-09-12T08:00:00.000Z
+
+      const studyDateOnly = studyDate.substring(0, 10);
+
+      return studyDateOnly === calendarDate;
+    });
+  };
+
+  // ========================================
+  // CREATE CALENDAR CELLS
+  // ========================================
+
+  const cells = [];
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    cells.push(<div className="calendar-day empty" key={`empty-${i}`} />);
+  }
+
+  // Actual days
+  for (let day = 1; day <= daysInMonth; day++) {
+    const daySessions = getSessionsForDay(day);
+
+    cells.push(
+      <div className="calendar-day" key={day}>
+        <div className="day-number">{day}</div>
+
+        <div className="calendar-sessions">
+          {daySessions.map((session) => (
+            <div className="calendar-session" key={session.id}>
+              <strong>📚 {session.subject}</strong>
+
+              {session.topic && <small>{session.topic}</small>}
+
+              {session.study_type && <small>{session.study_type}</small>}
+
+              <small>⏱ {session.duration_minutes} min</small>
             </div>
-        );
-    }
-
-    // ========================================
-    // LOADING
-    // ========================================
-
-    if (loading) {
-        return (
-            <div className="calendar-page">
-                <div className="loading-state">
-                    Loading calendar...
-                </div>
-            </div>
-        );
-    }
-
-    // ========================================
-    // PAGE
-    // ========================================
-
-    return (
-        <div className="calendar-page">
-
-            {/* HEADER */}
-
-            <div className="calendar-header">
-
-                <div>
-                    <div className="eyebrow">
-                        YOUR SCHEDULE
-                    </div>
-
-                    <h1>
-                        Study Calendar
-                    </h1>
-
-                    <p>
-                        View your scheduled
-                        study plans.
-                    </p>
-                </div>
-
-
-                {/* MONTH NAVIGATION */}
-
-                <div className="calendar-navigation">
-
-                    <button
-                        onClick={previousMonth}
-                    >
-                        ←
-                    </button>
-
-                    <h2>
-                        {monthName} {year}
-                    </h2>
-
-                    <button
-                        onClick={nextMonth}
-                    >
-                        →
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            {/* CALENDAR */}
-
-            <div className="calendar glass-card">
-
-                {/* WEEKDAYS */}
-
-                <div className="calendar-weekdays">
-
-                    <div>Sun</div>
-                    <div>Mon</div>
-                    <div>Tue</div>
-                    <div>Wed</div>
-                    <div>Thu</div>
-                    <div>Fri</div>
-                    <div>Sat</div>
-
-                </div>
-
-
-                {/* DAYS */}
-
-                <div className="calendar-grid">
-
-                    {cells}
-
-                </div>
-
-            </div>
-
+          ))}
         </div>
+      </div>,
     );
+  }
+
+  // ========================================
+  // LOADING
+  // ========================================
+
+  if (loading) {
+    return (
+      <div className="calendar-page">
+        <div className="loading-state">Loading calendar...</div>
+      </div>
+    );
+  }
+
+  // ========================================
+  // PAGE
+  // ========================================
+
+  return (
+    <div className="calendar-page">
+      {/* HEADER */}
+
+      <div className="calendar-header">
+        <div>
+          <div className="eyebrow">YOUR SCHEDULE</div>
+
+          <h1>Study Calendar</h1>
+
+          <p>View your scheduled study plans.</p>
+        </div>
+
+        {/* MONTH NAVIGATION */}
+
+        <div className="calendar-navigation">
+          <button onClick={previousMonth}>←</button>
+
+          <h2>
+            {monthName} {year}
+          </h2>
+
+          <button onClick={nextMonth}>→</button>
+        </div>
+      </div>
+
+      {/* CALENDAR */}
+
+      <div className="calendar glass-card">
+        {/* WEEKDAYS */}
+
+        <div className="calendar-weekdays">
+          <div>Sun</div>
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+        </div>
+
+        {/* DAYS */}
+
+        <div className="calendar-grid">{cells}</div>
+      </div>
+    </div>
+  );
 }
-
-
-// ========================================
-// IMPORTANT!
-// ========================================
 
 export default Calendar;

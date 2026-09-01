@@ -4,7 +4,7 @@ export default function Home() {
   const navigate = useNavigate();
 
   const handleCreatePlan = () => {
-    navigate("/dashboard?new=true");
+    navigate("/create-plan");
   };
 
   const handleViewDashboard = () => {
@@ -33,7 +33,7 @@ export default function Home() {
             className="btn btn-primary home-main-btn"
             onClick={handleCreatePlan}
           >
-            + Create a Study Plan
+            Create a Study Plan
           </button>
 
           <button

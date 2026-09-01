@@ -79,9 +79,6 @@ export default function CreatePlan() {
         throw new Error("Failed to create study plan.");
       }
 
-      alert("Study plan created successfully!");
-
-      setFormData(emptyForm);
 
       // Go directly to Dashboard
       navigate("/dashboard", {
