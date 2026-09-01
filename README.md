@@ -17,9 +17,7 @@ Features:
 - Undo completed sessions
 - Search study plans
 - Filter plans by priority and status
-- View study statistics and progress
 - Track study streaks
-- Light and dark mode
 - Responsive user interface
 
 Technologies Used
